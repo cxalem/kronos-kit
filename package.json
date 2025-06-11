@@ -1,9 +1,9 @@
 {
-  "author": "Torus Labs",
+  "author": "Kronos Guild",
   "bugs": {
-    "url": "https://github.com/Web3Auth/Web3Auth/issues"
+    "url": "https://github.com/KronosLabs/KronosKit/issues"
   },
-  "description": "Monorepo for web3 auth packages",
+  "description": "Monorepo for kronoskit packages",
   "devDependencies": {
     "@babel/register": "^7.27.1",
     "@rollup/plugin-node-resolve": "^16.0.1",
@@ -33,7 +33,7 @@
   },
   "engines": {
     "node": ">=20.x",
-    "npm": ">=9.x"
+    "pnpm": ">=8.x"
   },
   "homepage": "https://github.com/Web3Auth/Web3Auth#readme",
   "keywords": [
@@ -48,10 +48,11 @@
     "web3"
   ],
   "license": "ISC",
+  "packageManager": "pnpm@10.6.3",
   "lint-staged": {
     "*": "lerna run --concurrency 1 --stream --since HEAD --exclude-dependents pre-commit -- "
   },
-  "name": "web3auth",
+  "name": "kronoskit",
   "optionalDependencies": {
     "@nx/nx-linux-x64-gnu": "^21.1.1",
     "@rollup/rollup-linux-x64-gnu": "^4.41.0"
@@ -68,10 +69,10 @@
     "just:publish:lerna": "lerna publish",
     "lint": "cross-env FORCE_COLOR=1 lerna run lint --parallel",
     "locale": "node locales/importLocales.mjs",
-    "pack:lerna": "lerna exec 'npm pack'",
+    "pack:lerna": "lerna exec 'pnpm pack'",
     "pre-commit": "lerna run pre-commit",
     "prepare": "husky",
-    "publish:lerna": "npm run clean && npm install && lerna publish",
+    "publish:lerna": "pnpm run clean && pnpm install && lerna publish",
     "test": "cross-env FORCE_COLOR=1 lerna run test --parallel",
     "test-debugger": "cross-env FORCE_COLOR=1 lerna run test-debugger --parallel"
   },

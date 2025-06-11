@@ -1,0 +1,160 @@
+# KronosKit (Solana) – Developer Guide
+
+> Based on the **web3auth-web** monorepo
+
+---
+
+## 1. What is inside?
+
+This repository is a **Lerna-managed monorepo** that exposes two SDK flavours that you can embed in any DApp:
+
+1. **`@web3auth/modal`** – plug-and-play, UI-driven modal that abstracts wallet selection & social log-in.
+2. **`@web3auth/no-modal`** – headless SDK that gives you low-level control over connectors for every supported chain.
+
+```
+packages/
+ ├─ modal/        # UI + React/Vue composables
+ └─ no-modal/     # Pure connector logic (EVM + Solana)
+```
+
+Both packages share a **connector layer** (located under `packages/no-modal/src/connectors`) that knows how to talk to individual wallets. For Solana you will mostly interact with:
+
+* `packages/no-modal/src/connectors/injected-solana-connector/*`
+* `packages/no-modal/src/connectors/base-solana-connector/*`
+
+These connectors implement the [Solana Wallet Standard](https://github.com/solana-labs/wallet-standard) and surface a provider compatible with `@solana/web3.js`.
+
+---
+
+## 2. Quick start
+
+```bash
+# 1. Clone & install
+$ git clone https://github.com/Web3Auth/web3auth-web.git kronoskit && cd kronoskit
+$ npm ci          # or pnpm i / yarn
+
+# 2. Build all workspace packages
+$ npm run build
+
+# 3. Launch any example (eg. Vite + React + Solana)
+$ cd demo/vite-react-app-solana
+$ npm run dev
+```
+
+> Node **18+** is required (see `.nvmrc`).
+
+---
+
+## 3. Required environment variables
+
+Environment management is intentionally lightweight – only a handful of variables are consumed at **build-time** or by the **demo apps**.  
+Below is an exhaustive list of what the repository looks for (grep'd via `process.env.*`):
+
+| Variable | Scope | Meaning |
+|----------|-------|---------|
+| `WEB3AUTH_VERSION` | build | Automatically injected by Rollup/Webpack to stamp the SDK version inside bundles. You **do not** have to set this manually. |
+| `NODE_ENV` | runtime | Standard production/development switch (affects cookie security). |
+| `VITE_APP_SOLANA_MAINNET_RPC` | example apps | Override RPC URL when running the Vite React/Vue demos. |
+| `VITE_APP_SOLANA_TESTNET_RPC` | example apps | Same as above for testnet. |
+| `VITE_APP_SOLANA_DEVNET_RPC` | example apps | Same as above for devnet. |
+| `VITE_APP_PIMLICO_API_KEY` | example apps | Gasless relayer key used in the Vue sample (optional). |
+
+A minimal **`.env`** for Solana demos could look like:
+
+```env
+# .env
+VITE_APP_SOLANA_MAINNET_RPC=https://api.mainnet-beta.solana.com
+VITE_APP_SOLANA_TESTNET_RPC=https://api.testnet.solana.com
+VITE_APP_SOLANA_DEVNET_RPC=https://api.devnet.solana.com
+```
+
+Place the file next to the demo you want to run (e.g. `demo/vite-react-app-solana/.env`).
+
+---
+
+## 4. Where are the wallet connections?
+
+The SDK is split in layers:
+
+1. **Connector** – establishes the transport with a wallet (Injected, WalletConnect, Coinbase SDK …).  
+   For Solana: `WalletStandardConnector`, `BaseSolanaConnector`.
+2. **Provider wrapper** – normalises the RPC interface so that the rest of the codebase can speak a unified language.  
+   For Solana: `packages/no-modal/src/providers/solana-provider/*`.
+3. **Web3Auth Core** – orchestrates connectors, maintains session, MFA, analytics, etc.
+4. (optional) **Modal UI** – the React/Vue components you can import from `@web3auth/modal`.
+
+If you need to plug in **additional Solana wallets** you only have to supply their `Wallet` object (conforming to the Wallet Standard) and create a connector dynamically:
+
+```ts
+import { walletStandardConnector } from "@web3auth/no-modal";
+import { getPhantomWallet } from "@wallet-standard/phantom"; // example
+
+web3auth.addConnector(walletStandardConnector(getPhantomWallet()));
+```
+
+---
+
+## 5. Re-branding to **KronosKit** (Solana-only)
+
+The goal is to strip out EVM logic and expose a pristine Solana SDK.
+
+1. **Fork** this repo ➜ rename root package:  
+   ```bash
+   "name": "@kronos/kit"         # package.json (each workspace)
+   ```
+2. **Remove EVM connectors** – delete or ignore every folder under `packages/no-modal/src/connectors/*-evm-*` and `base-evm-connector`.
+3. **Keep only Solana chains** in `packages/no-modal/src/constants/chainConfig.ts` (or equivalent).  
+   Default to `devnet` when none supplied.
+4. **Replace examples** – Bootstrap a React/Vite template with [`@solana/wallet-adapter`](https://github.com/solana-labs/wallet-adapter) and point it to your local KronosKit build.
+5. **Update imports** – `import { Web3Auth } from "@kronos/kit"`.
+6. **Publish** – run `npm publish --access public` from each workspace once you are ready.
+
+### Using with Solana Wallet Adapter
+
+```tsx
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { KronosKit } from "@kronos/kit";
+
+const wallets = [new PhantomWalletAdapter()];
+
+<KronosKit>
+  <ConnectionProvider endpoint={process.env.VITE_APP_SOLANA_MAINNET_RPC!}>
+    <WalletProvider wallets={wallets} autoConnect>
+      <App />
+    </WalletProvider>
+  </ConnectionProvider>
+</KronosKit>
+```
+
+The underlying `WalletStandardConnector` will automatically pick up adapters that expose the Wallet Standard interface.
+
+---
+
+## 6. Scripts reference
+
+Run at repository root:
+
+| npm script | What it does |
+|------------|-------------|
+| `npm run build` | Builds every workspace package via Lerna. |
+| `npm run lint` | Runs ESLint across all packages. |
+| `npm run test` | Executes mocha tests. |
+| `npm run dev`  | Hot-reloads the modal package for local development. |
+
+---
+
+## 7. Further reading & references
+
+* Web3Auth docs – https://web3auth.io/docs  
+* Solana Wallet Adapter – https://github.com/solana-labs/wallet-adapter  
+* @solana/web3.js – https://solana.com/developers  
+* Solana Wallet Standard – https://github.com/solana-labs/wallet-standard  
+* Lerna monorepo – https://lerna.js.org  
+* Vite – https://vitejs.dev
+
+---
+
+### Licence
+
+MIT © Web3Auth & Contributors – forked & customised for KronosKit. 
